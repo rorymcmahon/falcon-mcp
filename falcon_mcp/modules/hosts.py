@@ -42,6 +42,18 @@ class HostsModule(BaseModule):
             name="get_host_details",
         )
 
+        self._add_tool(
+            server=server,
+            method=self.append_host_tags,
+            name="append_host_tags",
+        )
+
+        self._add_tool(
+            server=server,
+            method=self.remove_host_tags,
+            name="remove_host_tags",
+        )
+
     def register_resources(self, server: FastMCP) -> None:
         """Register resources with the MCP server.
 
@@ -176,4 +188,72 @@ class HostsModule(BaseModule):
             operation="PostDeviceDetailsV2",
             ids=ids,
             id_key="ids",
+        )
+
+    def append_host_tags(
+        self,
+        device_ids: List[str] = Field(
+            description="List of host device IDs to append tags to. Maximum: 500 IDs per request."
+        ),
+        tags: List[str] = Field(
+            description="List of Falcon Grouping Tags to append. Tags must be of the form 'FalconGroupingTags/TagName'."
+        ),
+    ) -> Dict[str, Any]:
+        """Append one or more Falcon Grouping Tags to one or more hosts.
+
+        This tool adds tags to hosts without removing existing tags.
+        Tags must be of the form 'FalconGroupingTags/TagName'.
+        """
+        logger.debug("Appending tags %s to device IDs: %s", tags, device_ids)
+
+        # Prepare the request body
+        body = prepare_api_parameters({
+            "action": "add",
+            "device_ids": device_ids,
+            "tags": tags,
+        })
+
+        # Make the API request
+        response = self.client.command("UpdateDeviceTags", body=body)
+
+        # Handle the response
+        return handle_api_response(
+            response,
+            operation="UpdateDeviceTags",
+            error_message="Failed to append host tags",
+            default_result={},
+        )
+
+    def remove_host_tags(
+        self,
+        device_ids: List[str] = Field(
+            description="List of host device IDs to remove tags from. Maximum: 500 IDs per request."
+        ),
+        tags: List[str] = Field(
+            description="List of Falcon Grouping Tags to remove. Tags must be of the form 'FalconGroupingTags/TagName'."
+        ),
+    ) -> Dict[str, Any]:
+        """Remove one or more Falcon Grouping Tags from one or more hosts.
+
+        This tool removes specific tags from hosts without affecting other existing tags.
+        Tags must be of the form 'FalconGroupingTags/TagName'.
+        """
+        logger.debug("Removing tags %s from device IDs: %s", tags, device_ids)
+
+        # Prepare the request body
+        body = prepare_api_parameters({
+            "action": "remove",
+            "device_ids": device_ids,
+            "tags": tags,
+        })
+
+        # Make the API request
+        response = self.client.command("UpdateDeviceTags", body=body)
+
+        # Handle the response
+        return handle_api_response(
+            response,
+            operation="UpdateDeviceTags",
+            error_message="Failed to remove host tags",
+            default_result={},
         )
