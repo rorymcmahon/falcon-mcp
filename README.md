@@ -81,7 +81,7 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 | **Core** | _No additional scopes_ | Basic connectivity and system information |
 | **Detections** | `Alerts:read` | Find and analyze detections to understand malicious activity |
 | **Discover** | `Assets:read` | Search and analyze application inventory across your environment |
-| **Hosts** | `Hosts:read` | Manage and query host/device information |
+| **Hosts** | `Hosts:read`<br>`Hosts:write` (for tagging operations) | Manage and query host/device information, append/remove host tags |
 | **Identity Protection** | `Identity Protection Entities:read`<br>`Identity Protection Timeline:read`<br>`Identity Protection Detections:read`<br>`Identity Protection Assessment:read`<br>`Identity Protection GraphQL:write` | Comprehensive entity investigation and identity protection analysis |
 | **Incidents** | `Incidents:read` | Analyze security incidents and coordinated activities |
 | **Intel** | `Actors (Falcon Intelligence):read`<br>`Indicators (Falcon Intelligence):read`<br>`Reports (Falcon Intelligence):read` | Research threat actors, IOCs, and intelligence reports |
