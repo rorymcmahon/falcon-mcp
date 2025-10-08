@@ -198,7 +198,7 @@ class HostsModule(BaseModule):
         tags: List[str] = Field(
             description="List of Falcon Grouping Tags to append. Tags must be of the form 'FalconGroupingTags/TagName'."
         ),
-    ) -> Dict[str, Any]:
+    ) -> List[Dict[str, Any]]:
         """Append one or more Falcon Grouping Tags to one or more hosts.
 
         This tool adds tags to hosts without removing existing tags.
@@ -232,7 +232,7 @@ class HostsModule(BaseModule):
         tags: List[str] = Field(
             description="List of Falcon Grouping Tags to remove. Tags must be of the form 'FalconGroupingTags/TagName'."
         ),
-    ) -> Dict[str, Any]:
+    ) -> List[Dict[str, Any]]:
         """Remove one or more Falcon Grouping Tags from one or more hosts.
 
         This tool removes specific tags from hosts without affecting other existing tags.
