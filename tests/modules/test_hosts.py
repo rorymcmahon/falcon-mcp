@@ -20,6 +20,8 @@ class TestHostsModule(TestModules):
         expected_tools = [
             "falcon_search_hosts",
             "falcon_get_host_details",
+            "falcon_append_host_tags",
+            "falcon_remove_host_tags",
         ]
         self.assert_tools_registered(expected_tools)
 
@@ -381,6 +383,66 @@ class TestHostsModule(TestModules):
         # Verify filter was applied correctly
         first_call = self.mock_client.command.call_args_list[0]
         self.assertEqual(first_call[1]["parameters"]["filter"], "platform_name:'Mac'")
+
+    def test_append_host_tags(self):
+        """Test appending tags to hosts."""
+        # Setup mock response
+        mock_response = {
+            "status_code": 200,
+            "body": {"resources": [{"device_id": "device1", "tags": ["FalconGroupingTags/TestTag"]}]},
+        }
+        self.mock_client.command.return_value = mock_response
+
+        # Call append_host_tags
+        result = self.module.append_host_tags(
+            device_ids=["device1", "device2"],
+            tags=["FalconGroupingTags/TestTag"]
+        )
+
+        # Verify client command was called correctly
+        self.mock_client.command.assert_called_once_with(
+            "UpdateDeviceTags",
+            body={
+                "action": "add",
+                "device_ids": ["device1", "device2"],
+                "tags": ["FalconGroupingTags/TestTag"],
+            }
+        )
+
+        # Verify result (handle_api_response returns the resources array)
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["device_id"], "device1")
+
+    def test_remove_host_tags(self):
+        """Test removing tags from hosts."""
+        # Setup mock response
+        mock_response = {
+            "status_code": 200,
+            "body": {"resources": [{"device_id": "device1", "tags": []}]},
+        }
+        self.mock_client.command.return_value = mock_response
+
+        # Call remove_host_tags
+        result = self.module.remove_host_tags(
+            device_ids=["device1", "device2"],
+            tags=["FalconGroupingTags/TestTag"]
+        )
+
+        # Verify client command was called correctly
+        self.mock_client.command.assert_called_once_with(
+            "UpdateDeviceTags",
+            body={
+                "action": "remove",
+                "device_ids": ["device1", "device2"],
+                "tags": ["FalconGroupingTags/TestTag"],
+            }
+        )
+
+        # Verify result (handle_api_response returns the resources array)
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["device_id"], "device1")
 
 
 if __name__ == "__main__":
