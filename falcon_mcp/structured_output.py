@@ -36,6 +36,7 @@ real deployment gets a genuine FastMCP subclass with the ``list_tools``
 override.
 """
 
+from mcp.server.fastmcp import FastMCP
 from mcp.types import Tool as MCPTool
 
 
@@ -66,11 +67,11 @@ class StructuredContentMixin:
         return tools
 
 
-def structured_content_server_class(base: type) -> type:
+def structured_content_server_class(base: type[FastMCP]) -> type[FastMCP]:
     """Return a subclass of ``base`` that applies :class:`StructuredContentMixin`.
 
-    ``base`` is the ``FastMCP`` class (or a test double) the server currently
-    references. Deriving at call time keeps ``falcon_mcp.server.FastMCP`` the
-    single construction seam the test suite patches.
+    ``base`` is the ``FastMCP`` class the server currently references. Deriving at
+    call time keeps ``falcon_mcp.server.FastMCP`` the single construction seam the
+    test suite patches.
     """
     return type("StructuredContentFastMCP", (StructuredContentMixin, base), {})

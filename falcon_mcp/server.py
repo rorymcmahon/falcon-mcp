@@ -176,7 +176,7 @@ class FalconMCPServer:
         # FastMCP directly — behaviour is identical to upstream. FastMCP is
         # resolved via the module global (the test suite's single patch point);
         # the subclass is derived from it only when it is a real class.
-        server_cls = FastMCP
+        server_cls: type[FastMCP] = FastMCP
         if self.structured_output and isinstance(FastMCP, type):
             server_cls = structured_content_server_class(FastMCP)
         self.server = server_cls(
