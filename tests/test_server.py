@@ -54,6 +54,7 @@ class TestFalconMCPServer(unittest.TestCase):
             debug=True,
             log_level="DEBUG",
             stateless_http=False,
+            json_response=False,
             host="127.0.0.1",
             port=8000,
         )
@@ -226,6 +227,7 @@ class TestFalconMCPServer(unittest.TestCase):
             debug=False,
             log_level="INFO",
             stateless_http=True,
+            json_response=False,
             host="127.0.0.1",
             port=8000,
         )
@@ -255,6 +257,7 @@ class TestFalconMCPServer(unittest.TestCase):
             debug=False,
             log_level="INFO",
             stateless_http=False,
+            json_response=False,
             host="127.0.0.1",
             port=8000,
         )
@@ -337,6 +340,7 @@ class TestFalconMCPServer(unittest.TestCase):
             debug=False,
             log_level="INFO",
             stateless_http=False,
+            json_response=False,
             host="0.0.0.0",
             port=9090,
         )
