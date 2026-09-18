@@ -75,6 +75,7 @@ class FalconMCPServer:
         allowed_tools: set[str] | None = None,
         excluded_tools: set[str] | None = None,
         structured_output: bool = False,
+        json_response: bool = False,
     ):
         """Initialize the Falcon MCP server.
 
@@ -100,6 +101,13 @@ class FalconMCPServer:
                 ``outputSchema`` in ``tools/list`` (see
                 falcon_mcp.structured_output). Default False preserves upstream
                 behaviour: unstructured content only.
+            json_response: Return streamable-HTTP responses as a single
+                ``application/json`` body instead of a ``text/event-stream`` (SSE)
+                stream. Required by proxies that relay MCP over a plain
+                request/response channel and cannot forward SSE — e.g. Amazon
+                Bedrock AgentCore Runtime, which otherwise fails every call.
+                Only affects the streamable-http transport. Default False
+                preserves upstream behaviour (SSE).
 
         Raises:
             ValueError: If allowed_tools or excluded_tools name unknown tools
@@ -114,6 +122,7 @@ class FalconMCPServer:
         self.port = port
         self.dynamic = dynamic
         self.structured_output = structured_output
+        self.json_response = json_response
 
         allowed_tools = allowed_tools or set()
         excluded_tools = excluded_tools or set()
@@ -185,6 +194,9 @@ class FalconMCPServer:
             debug=self.debug,
             log_level="DEBUG" if self.debug else "INFO",
             stateless_http=self.stateless_http,
+            # SSE by default; application/json when json_response is set (for
+            # proxies that cannot relay text/event-stream, e.g. AgentCore).
+            json_response=self.json_response,
             host=self.host,
             port=self.port,
         )
@@ -648,6 +660,16 @@ def parse_args() -> argparse.Namespace:
         "(env: FALCON_MCP_STRUCTURED_OUTPUT)",
     )
 
+    # JSON (non-SSE) streamable-http responses
+    parser.add_argument(
+        "--json-response",
+        action="store_true",
+        default=os.environ.get("FALCON_MCP_JSON_RESPONSE", "").lower() == "true",
+        help="Return streamable-http responses as a single application/json body instead of "
+        "a text/event-stream (SSE) stream. Needed by proxies that cannot relay SSE, such as "
+        "Amazon Bedrock AgentCore. Off by default (env: FALCON_MCP_JSON_RESPONSE)",
+    )
+
     # API key authentication for HTTP transports
     parser.add_argument(
         "--api-key",
@@ -738,6 +760,7 @@ def main() -> None:
             allowed_tools=set(args.tools),
             excluded_tools=set(args.exclude_tools),
             structured_output=args.structured_output,
+            json_response=args.json_response,
         )
         logger.info("Starting server with %s transport", args.transport)
         server.run(args.transport)
