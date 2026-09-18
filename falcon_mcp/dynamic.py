@@ -498,22 +498,26 @@ class DynamicMode:
         modules: dict[str, BaseModule],
         server: FastMCP,
         policy: ToolPolicy | None = None,
+        structured_output: bool = False,
     ) -> None:
         self.server = server
         self.catalog = DynamicToolCatalog(modules, policy)
+        # Match the server-wide structured-output choice for the dynamic-mode
+        # meta-tools (default False preserves upstream behaviour).
+        self.structured_output = structured_output
 
     def register(self) -> None:
         self.server.add_tool(
             self._search_tools,
             name="falcon_search_tools",
             annotations=READ_ONLY_ANNOTATIONS,
-            structured_output=False,
+            structured_output=self.structured_output,
         )
         self.server.add_tool(
             self._execute_tool,
             name="falcon_execute_tool",
             annotations=None,
-            structured_output=False,
+            structured_output=self.structured_output,
         )
 
     def _entries_remain(self) -> bool:

@@ -88,6 +88,11 @@ class BaseModule(ABC):
         self.client = client
         self.tools: list[str] = []  # List to track registered tools
         self.resources: list[str] = []  # List to track registered resources
+        # When True, tools are registered so their CallToolResult carries
+        # structuredContent (see falcon_mcp.structured_output). The server sets
+        # this before register_tools() runs; default False preserves upstream
+        # behaviour (unstructured content only, no outputSchema in tools/list).
+        self.structured_output: bool = False
 
     @abstractmethod
     def register_tools(self, server: FastMCP) -> None:
@@ -124,7 +129,7 @@ class BaseModule(ABC):
             offload_to_thread(method),
             name=prefixed_name,
             annotations=annotations or READ_ONLY_ANNOTATIONS,
-            structured_output=False,
+            structured_output=self.structured_output,
         )
         self.tools.append(prefixed_name)
         logger.debug("Added tool: %s", prefixed_name)

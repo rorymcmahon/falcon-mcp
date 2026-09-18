@@ -25,6 +25,7 @@ from falcon_mcp.common.auth import (
 from falcon_mcp.common.fql import FQL_FILTER_HINT_SUFFIX
 from falcon_mcp.common.logging import configure_logging, get_logger
 from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS, offload_to_thread
+from falcon_mcp.structured_output import structured_content_server_class
 from falcon_mcp.tool_filter import Resolution, ToolPolicy, ToolRecord
 
 if TYPE_CHECKING:
@@ -73,6 +74,7 @@ class FalconMCPServer:
         read_only: bool = False,
         allowed_tools: set[str] | None = None,
         excluded_tools: set[str] | None = None,
+        structured_output: bool = False,
     ):
         """Initialize the Falcon MCP server.
 
@@ -93,6 +95,11 @@ class FalconMCPServer:
             read_only: Register only read-only tools, overriding allowed_tools
             allowed_tools: Additive allow-list of prefixed tool names.
             excluded_tools: Deny-list of prefixed tool names; wins over allowed_tools
+            structured_output: Populate ``structuredContent`` on tool results for
+                clients that read structured output, without advertising
+                ``outputSchema`` in ``tools/list`` (see
+                falcon_mcp.structured_output). Default False preserves upstream
+                behaviour: unstructured content only.
 
         Raises:
             ValueError: If allowed_tools or excluded_tools name unknown tools
@@ -106,6 +113,7 @@ class FalconMCPServer:
         self.host = host
         self.port = port
         self.dynamic = dynamic
+        self.structured_output = structured_output
 
         allowed_tools = allowed_tools or set()
         excluded_tools = excluded_tools or set()
@@ -161,8 +169,17 @@ class FalconMCPServer:
             logger.error(msg)
             raise RuntimeError(msg)
 
-        # Initialize the MCP server
-        self.server = FastMCP(
+        # Initialize the MCP server. When structured output is enabled we build
+        # from a FastMCP subclass that strips outputSchema from tools/list, so
+        # tools registered with structured_output=True return structuredContent
+        # without inflating the listing (issue #325). When disabled we use
+        # FastMCP directly — behaviour is identical to upstream. FastMCP is
+        # resolved via the module global (the test suite's single patch point);
+        # the subclass is derived from it only when it is a real class.
+        server_cls: type[FastMCP] = FastMCP
+        if self.structured_output and isinstance(FastMCP, type):
+            server_cls = structured_content_server_class(FastMCP)
+        self.server = server_cls(
             name="Falcon MCP Server",
             instructions=self._instructions(),
             debug=self.debug,
@@ -184,7 +201,11 @@ class FalconMCPServer:
         for module_name in self.loaded_modules:
             if module_name in available_modules:
                 module_class = available_modules[module_name]
-                self.modules[module_name] = module_class(self.falcon_client)
+                module = module_class(self.falcon_client)
+                # Propagate the structured-output choice so each module's
+                # _add_tool registers with the matching setting.
+                module.structured_output = self.structured_output
+                self.modules[module_name] = module
                 logger.debug("Initialized module: %s", module_name)
 
         # Register tools and resources from modules
@@ -299,7 +320,7 @@ class FalconMCPServer:
             offload_to_thread(self.list_enabled_tools),
             name="falcon_list_enabled_tools",
             annotations=READ_ONLY_ANNOTATIONS,
-            structured_output=False,
+            structured_output=self.structured_output,
         )
 
         if self.dynamic:
@@ -309,7 +330,12 @@ class FalconMCPServer:
             # withheld tool is absent from search and 404s in the executor.
             from falcon_mcp.dynamic import DynamicMode
 
-            self._dynamic_mode = DynamicMode(self.modules, self.server, self.tool_policy)
+            self._dynamic_mode = DynamicMode(
+                self.modules,
+                self.server,
+                self.tool_policy,
+                structured_output=self.structured_output,
+            )
             self._dynamic_mode.register()
             self._resolution = self._dynamic_mode.catalog.resolution
         else:
@@ -318,14 +344,14 @@ class FalconMCPServer:
                 offload_to_thread(self.falcon_check_connectivity),
                 name="falcon_check_connectivity",
                 annotations=READ_ONLY_ANNOTATIONS,
-                structured_output=False,
+                structured_output=self.structured_output,
             )
 
             self.server.add_tool(
                 offload_to_thread(self.list_enabled_modules),
                 name="falcon_list_enabled_modules",
                 annotations=READ_ONLY_ANNOTATIONS,
-                structured_output=False,
+                structured_output=self.structured_output,
             )
 
             for module in self.modules.values():
@@ -612,6 +638,16 @@ def parse_args() -> argparse.Namespace:
         help="Enable stateless HTTP mode for scalable deployments (env: FALCON_MCP_STATELESS_HTTP)",
     )
 
+    # Structured tool output
+    parser.add_argument(
+        "--structured-output",
+        action="store_true",
+        default=os.environ.get("FALCON_MCP_STRUCTURED_OUTPUT", "").lower() == "true",
+        help="Populate structuredContent on tool results for clients that read structured "
+        "output, without advertising outputSchema in tools/list. Off by default "
+        "(env: FALCON_MCP_STRUCTURED_OUTPUT)",
+    )
+
     # API key authentication for HTTP transports
     parser.add_argument(
         "--api-key",
@@ -701,6 +737,7 @@ def main() -> None:
             read_only=args.read_only,
             allowed_tools=set(args.tools),
             excluded_tools=set(args.exclude_tools),
+            structured_output=args.structured_output,
         )
         logger.info("Starting server with %s transport", args.transport)
         server.run(args.transport)
