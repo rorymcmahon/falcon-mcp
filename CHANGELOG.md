@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.0](https://github.com/rorymcmahon/falcon-mcp/compare/v0.19.1...v0.20.0) (2026-09-18)
+
+
+### Features
+
+* **server:** opt-in JSON (non-SSE) streamable-http responses ([#4](https://github.com/rorymcmahon/falcon-mcp/issues/4)) ([0f365d6](https://github.com/rorymcmahon/falcon-mcp/commit/0f365d6787864c7a0c6b8577633500f47a80237e))
+
 ## [0.19.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.18.0...v0.19.0) (2026-09-01)
 
 
